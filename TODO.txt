@@ -1,0 +1,9 @@
+-hide API key
+-push to github repo
+-better rate limiting
+-add bot to scrape r/wsb for additional stocks
+-move tickers array to different file
+-dockerize/ deploy
+-add way to pick target week from ui
+-search function from ui (find if in array or compute new card if not)
+-timestamp data
