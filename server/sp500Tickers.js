@@ -508,5 +508,17 @@ module.exports = {
         'ZBH',
         'ZION',
         'ZTS',
+    ],
+    shortList: [
+        'TSLA',
+        'AMC',
+        'GME',
+        'SNAP',
+        'MMM',
+        'AOS',
+        'ABT',
+        'ABBV',
+        'ABMD',
+        'ACN'
     ]
 }

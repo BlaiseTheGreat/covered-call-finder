@@ -4,11 +4,12 @@ const keys = require("./keys");
 const app = express();
 const PORT = 5000;
 const axios = require('axios');
-
-
+const { tickers, shortList } = require("./sp500Tickers");
+const { TD_KEY } = require("./keys");
 const { fetchBitcoinPrice } = require('./fetchBitcoinPrice');
 
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }))
 
 
 
@@ -21,32 +22,32 @@ app.get('/btc', async (req, res) => {
 
 /////////////////////////////////////////////////////////////////////////////
 
-const { TD_KEY } = require("./keys");
-const firstHalfURL =        'https://api.tdameritrade.com/v1/marketdata/chains?apikey=';
-const contractTypeString = '&contractType=';
-const strikeCountString = '&strikeCount=';
-const toDateString = '&toDate=';
-const toDate = '2021-10-02';
-const fromDateString = '&fromDate=';
-const fromDate = '2021-09-29'
-const contractType = 'CALL';
-const strikeCount = 1;
 
-function makeWeekOutURL(ticker) {
-    return firstHalfURL + TD_KEY + '&symbol=' + ticker + contractTypeString + contractType + strikeCountString + strikeCount + fromDateString + fromDate + toDateString + toDate;
+
+function makeAPICall(id, ticker = 'GME') {
+    const response = axios.get('https://api.tdameritrade.com/v1/marketdata/chains', {
+        params: {
+            id: id,
+            apikey: TD_KEY,
+            symbol: ticker,
+            contractType: 'CALL',
+            strikeCount: 1,
+            fromDate: '2021-09-29',
+            toDate: '2021-10-02'
+        }
+    });
+    return response;
 }
-
-const { tickers } = require("./sp500Tickers");
-
 
 
 app.get('/all', async (req, res) => {
-    console.log('in all');
+    // console.log('in all');
     try {
         let output = [];
-        for (let i = 0; i < 10; i++) { //tickers.length
-            const response = await axios.get(makeWeekOutURL(tickers[i]));
-            const dateData = response.data.callExpDateMap['2021-10-01:8']; // TODO THIS IS HARDCODED!~!~!~! :(
+        for (let i = 0; i < tickers.length; i++) { //tickers.length
+            const response = await makeAPICall(i+1, tickers[i]);
+            const date = Object.keys(response.data.callExpDateMap)[0];
+            const dateData = response.data.callExpDateMap[date];
             if (dateData) {
                 const ticker = tickers[i];
                 const underlyingPrice = response.data.underlyingPrice;
@@ -57,10 +58,10 @@ app.get('/all', async (req, res) => {
 
                 output.push({
                     ticker: ticker,
-                    underlyingPrice: underlyingPrice,
+                    underlyingPrice: underlyingPrice.toFixed(2),
                     closestStrikePrice: closestStrikePrice,
                     last: last,
-                    ccRatio: ccRatio,
+                    ccRatio: ccRatio.toFixed(2),
                     description: description
                 });
             } else {
@@ -68,15 +69,18 @@ app.get('/all', async (req, res) => {
             }
 
             console.log('finished: ', i);
-            if(i !== 0 && i%50 === 0) { //TODO , GET BETTER RATE LIMITING IDIOT
+            if (i !== 0 && i % 50 === 0) { //TODO , GET BETTER RATE LIMITING IDIOT
                 await new Promise(r => setTimeout(r, 20000));
             }
 
 
 
         } // end of for loop
-        
+
         output.sort((a, b) => b.ccRatio - a.ccRatio);
+        for(let i = 0; i < output.length; i++) {
+            output[i].rank = i+1;
+        }
         res.send(output);
 
     } catch (e) {
@@ -89,8 +93,8 @@ app.get('/all', async (req, res) => {
 
 /////////////////////////////////////////////////////////////////////////
 
-app.use(express.urlencoded({ extended: true }))
+
 
 app.listen(PORT, () => {
-    console.log("Server is running on", PORT);
+    console.log("Server is running on port:", PORT);
 });
